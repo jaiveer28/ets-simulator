@@ -1,0 +1,17 @@
+# One-click deploy config for Render (https://render.com).
+# With this file in the repo, Render can create the service automatically
+# ("New +" -> "Blueprint") instead of you filling the settings in by hand.
+services:
+  - type: web
+    name: ets-simulator
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 60"
+    envVars:
+      # Render generates a strong random secret for the session cookie, so you
+      # never have to invent or store one yourself.
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.12.10"

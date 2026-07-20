@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Stocks · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="report-head">
+  <div>
+    <span class="eyebrow">Reference</span>
+    <h1>Available stocks</h1>
+    <p class="muted">
+      Background on the {{ stocks|length }} companies you can trade. Prices shown
+      are as of <strong>{{ current_date }}</strong> — the current simulated date.
+      This page deliberately shows no past performance or future data.
+    </p>
+  </div>
+</div>
+
+<div class="stock-grid">
+  {% for s in stocks %}
+  <article class="stock-card">
+    <div class="head">
+      <div>
+        <span class="nm">{{ s.name }}</span>
+        <span class="tk">{{ s.ticker }}</span>
+      </div>
+      <div class="px">
+        <b>{{ s.price | money }}</b>
+        <span>as of {{ current_date }}</span>
+      </div>
+    </div>
+    <p>{{ s.description }}</p>
+    <div class="meta">
+      <span class="chip">{{ s.sector }}</span>
+      <span class="chip">{{ s.region }}</span>
+      <span class="chip">Trades in {{ s.currency }}</span>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+<section class="panel" style="margin-top:1.15rem">
+  <h2>How to read this</h2>
+  <p class="muted small">
+    Every price in {{ app_name }} is converted to <b>US dollars</b> using the
+    exchange rate from that same historical date, so a rupee or euro stock is
+    always comparable to a dollar one. Prices are <b>adjusted</b> for stock
+    splits and dividends, which is why they may not match the headline price you
+    remember from the news.
+  </p>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('dashboard') }}">Back to dashboard to trade</a>
+  </div>
+</section>
+{% endblock %}

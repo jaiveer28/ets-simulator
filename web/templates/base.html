@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <!-- Local stylesheet only: no CDN, no web fonts, so the app runs offline. -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <nav class="nav">
+    <a href="{{ url_for('dashboard') }}" class="{{ 'on' if request.endpoint=='dashboard' }}">Dashboard</a>
+    <a href="{{ url_for('stocks') }}" class="{{ 'on' if request.endpoint=='stocks' }}">Stocks</a>
+    <a href="{{ url_for('performance') }}" class="{{ 'on' if request.endpoint=='performance' }}">Performance</a>
+    <a href="{{ url_for('history') }}" class="{{ 'on' if request.endpoint=='history' }}">History</a>
+    {% if report_years %}
+      <div class="dropdown">
+        <button type="button" class="linkish">Reports ▾</button>
+        <div class="menu">
+          {% for y in report_years %}
+            <a href="{{ url_for('report', year=y) }}">{{ y }} Annual Report</a>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </nav>
+</header>
+
+<main class="wrap">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flashes">
+        {% for cat, msg in messages %}
+          <div class="flash {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<script>
+/* Single-submit guard (no library, works offline).
+   Prevents a fast double-click from firing a form twice -- notably "Advance",
+   where two clicks would jump two months. We disable the submit button AFTER
+   the browser has already serialised the form (setTimeout defers to the next
+   tick), so the clicked button's name/value is still sent. */
+document.addEventListener('submit', function (e) {
+  var form = e.target;
+  if (form.dataset.submitting === '1') { e.preventDefault(); return; }
+  form.dataset.submitting = '1';
+  var btn = e.submitter || form.querySelector('button, [type="submit"]');
+  setTimeout(function () {
+    if (btn) {
+      btn.disabled = true;
+      if (btn.tagName === 'BUTTON' && !btn.dataset.keepLabel) {
+        btn.dataset.original = btn.innerHTML;
+        btn.textContent = 'Working…';
+      }
+    }
+  }, 0);
+}, false);
+</script>
+</body>
+</html>

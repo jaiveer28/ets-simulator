@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ app_name }}{% endblock %}
+
+{% block content %}
+{# Month-change transition: fires only right after a successful advance.
+   Pure CSS, fades itself out, pointer-events:none so it never blocks a click. #}
+{% if moved %}
+<div class="monthflash" aria-hidden="true">
+  <div>
+    <span class="cap">Time advanced</span>
+    <span class="big">{{ month_label }}</span>
+  </div>
+</div>
+{% endif %}
+
+<!-- THE CLOCK: large, centred, always visible -->
+<section class="timehero">
+  <span class="eyebrow">Current simulated month</span>
+  <span class="month">{{ month_label }}</span>
+  <span class="stepline">Month {{ interval_no }} of {{ total_intervals }}
+    &nbsp;·&nbsp; {{ current_date }}</span>
+  <div class="progress"><span style="width: {{ (interval_no / total_intervals * 100) }}%"></span></div>
+  <p class="note">Prices are as of {{ current_date }}. Nothing beyond this date
+    exists to the simulator yet.</p>
+
+  {% if needs_checkpoint %}
+    <a class="btn big" href="{{ url_for('checkpoint') }}">
+      Complete {{ year }} &amp; review your annual report →</a>
+  {% else %}
+    <form method="post" action="{{ url_for('advance') }}">
+      <button class="btn big" {% if is_finished %}disabled{% endif %}>
+        {% if is_finished %}Simulation complete{% else %}Advance to next month →{% endif %}
+      </button>
+    </form>
+  {% endif %}
+</section>
+
+<!-- Headline numbers: total value is the hero -->
+<section class="cards four">
+  <div class="card hero">
+    <span class="card-label">Total portfolio value</span>
+    <strong class="card-value">{{ state.total_value | money }}</strong>
+    <span class="card-sub {{ 'up' if state.pnl_pct >= 0 else 'down' }}">
+      {{ state.pnl_pct | pct }} all-time</span>
+  </div>
+  <div class="card">
+    <span class="card-label">Profit / loss</span>
+    <strong class="card-value {{ 'up' if state.pnl_dollars >= 0 else 'down' }}">
+      {{ state.pnl_dollars | money }}</strong>
+    <span class="card-sub muted">vs {{ state.starting_capital | money }} start</span>
+  </div>
+  <div class="card">
+    <span class="card-label">Cash available</span>
+    <strong class="card-value">{{ state.cash | money }}</strong>
+  </div>
+  <div class="card">
+    <span class="card-label">Invested in stocks</span>
+    <strong class="card-value">{{ state.holdings_value | money }}</strong>
+  </div>
+</section>
+
+<div class="split">
+  <!-- Holdings -->
+  <section class="panel">
+    <h2>Your holdings</h2>
+    {% if holdings %}
+    <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Stock</th><th class="r">Shares</th><th class="r">Avg cost</th>
+            <th class="r">Price now</th><th class="r">Value</th>
+            <th class="r">Gain / loss</th></tr>
+      </thead>
+      <tbody>
+        {% for h in holdings %}
+        <tr>
+          <td><span class="tick">{{ h.ticker }}</span><br><span class="muted small">{{ h.name }}</span></td>
+          <td class="r">{{ h.shares | shares }}</td>
+          <td class="r">{{ h.avg_cost | money }}</td>
+          <td class="r">{{ h.price_usd | money }}</td>
+          <td class="r"><strong>{{ h.value_usd | money }}</strong></td>
+          <td class="r {{ 'up' if (h.gain_usd or 0) >= 0 else 'down' }}">
+            {{ h.gain_usd | money }}<br>
+            <span class="small">{{ h.gain_pct | pct }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+      <p class="muted">You don't hold any stocks yet. Use the trade panel to buy —
+        or read up on the companies first on the
+        <a href="{{ url_for('stocks') }}">Stocks</a> page.</p>
+    {% endif %}
+  </section>
+
+  <!-- Trade panel -->
+  <section class="panel">
+    <h2>Trade</h2>
+    <form method="post" action="{{ url_for('trade') }}" class="trade-form">
+      <label>Stock
+        <select name="ticker" required>
+          {% for u in universe %}
+            <option value="{{ u.ticker }}">
+              {{ u.ticker }} — {{ u.name }} ({{ u.price | money }})
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Order by
+        <select name="mode">
+          <option value="dollars">Dollar amount ($)</option>
+          <option value="shares">Number of shares</option>
+          <option value="percent">Percentage (%)</option>
+        </select>
+      </label>
+
+      <label>Amount
+        <input type="number" name="amount" step="any" min="0" required
+               placeholder="e.g. 10000">
+      </label>
+
+      <p class="hint">
+        Percentage mode: on <b>buy</b> it spends that % of your cash; on
+        <b>sell</b> it sells that % of the holding. Use <b>100%</b> to buy with
+        everything or sell out completely — computed exactly by the engine.
+      </p>
+
+      <div class="btn-row">
+        <button class="btn" name="action" value="buy">Buy</button>
+        <button class="btn sell" name="action" value="sell">Sell</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<!-- Benchmarks at a glance -->
+<section class="panel">
+  <h2>Versus benchmarks <span class="muted small">(as of {{ current_date }})</span></h2>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Strategy</th><th class="r">Value</th><th class="r">Return</th></tr></thead>
+    <tbody>
+      <tr class="highlight">
+        <td><strong>Your portfolio</strong></td>
+        <td class="r">{{ state.total_value | money }}</td>
+        <td class="r {{ 'up' if state.pnl_pct >= 0 else 'down' }}">{{ state.pnl_pct | pct }}</td>
+      </tr>
+      <tr>
+        <td>{{ marks.buy_and_hold.name }}</td>
+        <td class="r">{{ marks.buy_and_hold.value_usd | money }}</td>
+        <td class="r {{ 'up' if marks.buy_and_hold.pnl_pct >= 0 else 'down' }}">
+          {{ marks.buy_and_hold.pnl_pct | pct }}</td>
+      </tr>
+      {% if marks.index %}
+      <tr>
+        <td>{{ marks.index.name }}</td>
+        <td class="r">{{ marks.index.value_usd | money }}</td>
+        <td class="r {{ 'up' if marks.index.pnl_pct >= 0 else 'down' }}">
+          {{ marks.index.pnl_pct | pct }}</td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+  </div>
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('performance') }}">View performance chart →</a>
+    <form method="post" action="{{ url_for('reset') }}"
+          onsubmit="return confirm('Start a brand new simulation? Your current one stays saved.')">
+      <button class="btn ghost danger">Start new simulation</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

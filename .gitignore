@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+
+# Local editor / tooling config (not part of the project)
+.claude/
+
+# Per-user runtime state -- recreated on first run, must NOT be committed.
+data/simulations.db
+data/simulations.db-wal
+data/simulations.db-shm
+
+# NOTE: data/market.db IS committed on purpose -- the deployed app needs the
+# historical prices and does not re-download them in the cloud.

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Transaction history · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="report-head">
+  <div>
+    <span class="eyebrow">Audit log</span>
+    <h1>Transaction history</h1>
+    <p class="muted">Every trade, newest first. {{ log|length }} transaction{{ '' if log|length == 1 else 's' }}.</p>
+  </div>
+</div>
+
+<section class="panel">
+  {% if log %}
+  <div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr><th>Simulated date</th><th>Action</th><th>Stock</th>
+          <th class="r">Shares</th><th class="r">Price / share</th>
+          <th class="r">Total value</th><th class="r">Cash after</th></tr>
+    </thead>
+    <tbody>
+      {% for t in log %}
+      <tr>
+        <td>{{ t.date }}</td>
+        <td><span class="pill {{ t.action|lower }}">{{ t.action }}</span></td>
+        <td><span class="tick">{{ t.ticker }}</span></td>
+        <td class="r">{{ t.shares | shares }}</td>
+        <td class="r">{{ t.price_usd | money }}</td>
+        <td class="r">{{ t.total_value | money }}</td>
+        <td class="r">{{ t.cash_after | money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <p class="muted">No trades yet. Once you buy or sell, every decision is logged here.</p>
+  {% endif %}
+</section>
+
+<div class="actions"><a class="btn" href="{{ url_for('dashboard') }}">Back to dashboard</a></div>
+{% endblock %}

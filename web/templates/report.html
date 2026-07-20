@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}{{ r.year }} Annual Report · {{ app_name }}{% endblock %}
+
+{% block content %}
+{# Checkpoint mode: this year is finished but not yet closed. The ONLY way into
+   January is the Continue button at the bottom of this page. #}
+{% if checkpoint %}
+<div class="checkpoint-bar">
+  <div>
+    <strong>Year {{ r.year }} complete</strong>
+    <p>Review how you did before the simulation moves on
+      {% if next_year %}to January {{ next_year }}{% else %}to the finish{% endif %}.</p>
+  </div>
+  <form method="post" action="{{ url_for('continue_year') }}">
+    <button class="btn big">
+      {% if next_year %}Continue to {{ next_year }} →{% else %}Finish simulation →{% endif %}
+    </button>
+  </form>
+</div>
+{% endif %}
+
+<div class="report-head">
+  <div>
+    <span class="eyebrow">Annual Performance Report</span>
+    <h1>{{ r.year }}</h1>
+    <p class="muted">Year ending {{ r.date }}</p>
+  </div>
+  <div class="report-headline {{ 'up' if r.change_usd >= 0 else 'down' }}">
+    <span>{{ r.change_pct | pct }}</span>
+    <small>{{ r.change_usd | money }} this year</small>
+  </div>
+</div>
+
+<!-- Year start vs end -->
+<section class="cards four">
+  <div class="card">
+    <span class="card-label">Value at year start</span>
+    <strong class="card-value">{{ r.start_value | money }}</strong>
+  </div>
+  <div class="card">
+    <span class="card-label">Value at year end</span>
+    <strong class="card-value">{{ r.end_value | money }}</strong>
+  </div>
+  <div class="card">
+    <span class="card-label">Change this year</span>
+    <strong class="card-value {{ 'up' if r.change_usd >= 0 else 'down' }}">
+      {{ r.change_usd | money }}</strong>
+  </div>
+  <div class="card">
+    <span class="card-label">Cash at year end</span>
+    <strong class="card-value">{{ r.cash | money }}</strong>
+  </div>
+</section>
+
+<!-- Benchmarks -->
+<section class="panel">
+  <h2>How you compared</h2>
+  <div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr><th>Strategy</th><th class="r">Start of year</th>
+          <th class="r">End of year</th><th class="r">Return</th></tr>
+    </thead>
+    <tbody>
+      <tr class="highlight">
+        <td><strong>Your portfolio</strong></td>
+        <td class="r">{{ r.start_value | money }}</td>
+        <td class="r">{{ r.end_value | money }}</td>
+        <td class="r {{ 'up' if r.change_pct >= 0 else 'down' }}">
+          {{ r.change_pct | pct }}</td>
+      </tr>
+      {% for b in r.benchmarks %}
+      <tr>
+        <td>{{ b.name }}</td>
+        <td class="r">{{ b.start_value | money }}</td>
+        <td class="r">{{ b.end_value | money }}</td>
+        <td class="r {{ 'up' if b.pct >= 0 else 'down' }}">{{ b.pct | pct }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <div class="verdicts">
+    {% for v in r.beat %}
+      <div class="verdict {{ 'up' if v.diff >= 0 else 'down' }}">
+        You {{ 'beat' if v.diff >= 0 else 'trailed' }} <b>{{ v.name }}</b>
+        by {{ '%+.2f' | format(v.diff) }} percentage points
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Per-year risk metrics -->
+{% if r.risk and r.risk.n_periods >= 2 %}
+<section class="panel">
+  <h2>Risk in {{ r.year }}</h2>
+  <div class="cards three">
+    <div class="card">
+      <span class="card-label">Volatility (annualised)</span>
+      <strong class="card-value">{{ r.risk.volatility | metricpct }}</strong>
+      <span class="explain">Spread of this year's monthly returns — how much the
+        portfolio bounced around.</span>
+    </div>
+    <div class="card accent-down">
+      <span class="card-label">Maximum drawdown</span>
+      <strong class="card-value down">-{{ r.risk.max_drawdown | metricpct }}</strong>
+      <span class="explain">Deepest peak-to-trough fall during {{ r.year }}.</span>
+    </div>
+    <div class="card">
+      <span class="card-label">Sharpe ratio</span>
+      <strong class="card-value">{{ r.risk.sharpe | ratio }}</strong>
+      <span class="explain">Return per unit of risk above a
+        {{ (r.risk.risk_free_rate * 100) | round(0) | int }}% risk-free rate.</span>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- Best / worst -->
+{% if r.best %}
+<section class="cards two">
+  <div class="card accent-up">
+    <span class="card-label">Best performer held</span>
+    <strong class="card-value">{{ r.best.name }}</strong>
+    <span class="card-sub up">{{ r.best.pct | pct }} over the year</span>
+  </div>
+  {% if r.worst %}
+  <div class="card accent-down">
+    <span class="card-label">Worst performer held</span>
+    <strong class="card-value">{{ r.worst.name }}</strong>
+    <span class="card-sub down">{{ r.worst.pct | pct }} over the year</span>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<!-- Best / worst REALIZED trades (closed round-trips this year, FIFO) -->
+{% if r.realized.count %}
+<section class="panel">
+  <h2>Best &amp; worst decisions
+    <span class="muted small">— trades you closed in {{ r.year }}</span></h2>
+  <div class="cards two">
+    <div class="card accent-up">
+      <span class="card-label">Best realized trade</span>
+      <strong class="card-value">{{ r.realized.best.ticker }}</strong>
+      <span class="card-sub {{ 'up' if r.realized.best.pnl_usd >= 0 else 'down' }}">
+        {{ r.realized.best.pnl_usd | money }} ({{ r.realized.best.pnl_pct | pct }})</span>
+      <span class="explain">
+        Bought {{ r.realized.best.shares | shares }} @
+        {{ r.realized.best.buy_price | money }} on {{ r.realized.best.buy_date }},
+        sold @ {{ r.realized.best.sell_price | money }} on {{ r.realized.best.sell_date }}.</span>
+    </div>
+    {% if r.realized.worst %}
+    <div class="card accent-down">
+      <span class="card-label">Worst realized trade</span>
+      <strong class="card-value">{{ r.realized.worst.ticker }}</strong>
+      <span class="card-sub {{ 'up' if r.realized.worst.pnl_usd >= 0 else 'down' }}">
+        {{ r.realized.worst.pnl_usd | money }} ({{ r.realized.worst.pnl_pct | pct }})</span>
+      <span class="explain">
+        Bought {{ r.realized.worst.shares | shares }} @
+        {{ r.realized.worst.buy_price | money }} on {{ r.realized.worst.buy_date }},
+        sold @ {{ r.realized.worst.sell_price | money }} on {{ r.realized.worst.sell_date }}.</span>
+    </div>
+    {% endif %}
+  </div>
+  <p class="muted small" style="margin-top:.8rem">
+    "Realized" means a completed buy-then-sell. Lots are matched
+    <b>first-in, first-out</b> (a sale closes your oldest shares first), so P&amp;L
+    reflects the actual buy price of the shares sold. Only sales that happened in
+    {{ r.year }} count here — the matching purchase may be from an earlier year.
+  </p>
+</section>
+{% endif %}
+
+<!-- All holdings performance -->
+{% if r.performers %}
+<section class="panel">
+  <h2>Holdings at year end</h2>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Stock</th><th class="r">Value</th>
+               <th class="r">Stock's move this year</th></tr></thead>
+    <tbody>
+      {% for p in r.performers %}
+      <tr>
+        <td><span class="tick">{{ p.ticker }}</span> {{ p.name }}</td>
+        <td class="r">{{ p.value_usd | money }}</td>
+        <td class="r {{ 'up' if p.pct >= 0 else 'down' }}">{{ p.pct | pct }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted small">
+    "Stock's move this year" is the share price change over the calendar year.
+    If you bought partway through the year, your own return on that position
+    will differ.
+  </p>
+</section>
+{% endif %}
+
+<!-- Trades this year -->
+<section class="panel">
+  <h2>Decisions made in {{ r.year }}</h2>
+  {% if r.trades %}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Date</th><th>Action</th><th>Stock</th>
+               <th class="r">Shares</th><th class="r">Price</th>
+               <th class="r">Value</th></tr></thead>
+    <tbody>
+      {% for t in r.trades %}
+      <tr>
+        <td>{{ t.date }}</td>
+        <td><span class="pill {{ t.action|lower }}">{{ t.action }}</span></td>
+        <td><span class="tick">{{ t.ticker }}</span></td>
+        <td class="r">{{ t.shares | shares }}</td>
+        <td class="r">{{ t.price_usd | money }}</td>
+        <td class="r">{{ t.total_value | money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <p class="muted">You made no trades this year — you held your position throughout.</p>
+  {% endif %}
+</section>
+
+<div class="actions">
+  {% if checkpoint %}
+    {# The mandatory step forward. Guarded server-side too: /continue-year is a
+       no-op once the year is closed, so a double-click can't skip a month. #}
+    <form method="post" action="{{ url_for('continue_year') }}">
+      <button class="btn big">
+        {% if next_year %}Continue to {{ next_year }} →{% else %}Finish simulation →{% endif %}
+      </button>
+    </form>
+    <a class="btn ghost" href="{{ url_for('performance') }}">See performance chart</a>
+  {% else %}
+    <a class="btn" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+    <a class="btn ghost" href="{{ url_for('performance') }}">See performance chart</a>
+  {% endif %}
+</div>
+{% endblock %}

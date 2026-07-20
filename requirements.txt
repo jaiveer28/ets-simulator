@@ -1,0 +1,10 @@
+# ETS dependencies. Pinned loosely so the project stays reproducible but easy
+# to update.
+
+# --- Web app (needed to RUN the simulator) ---
+flask>=3,<4
+pandas>=2,<4          # used by the engine clock and the data pipeline
+gunicorn>=21,<24      # production WSGI server (used by cloud hosts like Render)
+
+# --- Data pipeline only (main.py, one-time historical download) ---
+yfinance>=0.2,<2

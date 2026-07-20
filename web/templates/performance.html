@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Performance · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="report-head">
+  <div>
+    <span class="eyebrow">Performance</span>
+    <h1>Portfolio vs benchmarks</h1>
+    <p class="muted">
+      Plotted from the start of the simulation up to <strong>{{ current_date }}</strong>.
+      The chart stops at the current simulated date — future values are not
+      computed or sent to this page.
+    </p>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="chart-wrap">{{ chart | safe }}</div>
+</section>
+
+<section class="panel">
+  <h2>Risk &amp; return
+    <span class="muted small">— whole simulation, as of {{ current_date }}</span></h2>
+  {% if not risk or risk.n_periods < 2 %}
+    <p class="muted">Not enough history yet. Advance a few months and these
+      risk metrics will appear.</p>
+  {% else %}
+  <div class="cards three">
+    <div class="card">
+      <span class="card-label">Volatility (annualised)</span>
+      <strong class="card-value">{{ risk.volatility | metricpct }}</strong>
+      <span class="explain">How bumpy the ride is — the spread of monthly
+        returns, scaled to a yearly figure. Higher means bigger swings.</span>
+    </div>
+    <div class="card accent-down">
+      <span class="card-label">Maximum drawdown</span>
+      <strong class="card-value down">-{{ risk.max_drawdown | metricpct }}</strong>
+      <span class="explain">The worst peak-to-trough fall so far — the deepest
+        loss you'd have sat through before recovering.</span>
+    </div>
+    <div class="card">
+      <span class="card-label">Sharpe ratio</span>
+      <strong class="card-value">{{ risk.sharpe | ratio }}</strong>
+      <span class="explain">Return earned per unit of risk, above a
+        {{ (risk.risk_free_rate * 100) | round(0) | int }}% risk-free rate.
+        Higher is better — roughly &gt;1 is good, &gt;2 excellent.</span>
+    </div>
+  </div>
+  {% if risk.n_periods < 6 %}
+    <p class="muted small" style="margin-top:.8rem">
+      Based on only {{ risk.n_periods }} monthly return{{ 's' if risk.n_periods != 1 }} so far —
+      these stabilise as the simulation progresses.</p>
+  {% endif %}
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Standings as of {{ current_date }}</h2>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Strategy</th><th class="r">Value</th><th class="r">Return</th></tr></thead>
+    <tbody>
+      <tr class="highlight">
+        <td><strong>Your portfolio</strong></td>
+        <td class="r">{{ state.total_value | money }}</td>
+        <td class="r {{ 'up' if state.pnl_pct >= 0 else 'down' }}">{{ state.pnl_pct | pct }}</td>
+      </tr>
+      <tr>
+        <td>{{ marks.buy_and_hold.name }}</td>
+        <td class="r">{{ marks.buy_and_hold.value_usd | money }}</td>
+        <td class="r {{ 'up' if marks.buy_and_hold.pnl_pct >= 0 else 'down' }}">
+          {{ marks.buy_and_hold.pnl_pct | pct }}</td>
+      </tr>
+      {% if marks.index %}
+      <tr>
+        <td>{{ marks.index.name }}</td>
+        <td class="r">{{ marks.index.value_usd | money }}</td>
+        <td class="r {{ 'up' if marks.index.pnl_pct >= 0 else 'down' }}">
+          {{ marks.index.pnl_pct | pct }}</td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted small">
+    The S&amp;P 500 benchmark uses the <b>Total Return</b> index, which includes
+    reinvested dividends — the like-for-like comparison, since your stocks are
+    valued on dividend-adjusted prices.
+  </p>
+</section>
+
+<div class="actions"><a class="btn" href="{{ url_for('dashboard') }}">Back to dashboard</a></div>
+{% endblock %}
