@@ -23,7 +23,71 @@ only ever holds past trades) and the clock-bounded value series.
 
 from collections import deque
 
-from . import metrics
+from . import intelligence, metrics
+
+
+def _average_cost(engine, user_id=None):
+    """
+    Weighted-average buy price per share for each CURRENTLY-held stock, from the
+    trade log (sells reduce shares but leave the average unchanged -- standard
+    average-cost accounting). Used to tell whether a held position is up or down.
+    Reads only past trades, so no lookahead.
+    """
+    portfolio = engine.portfolios[user_id or engine.default_user]
+    shares, cost = {}, {}
+    for t in portfolio.transactions:
+        if t.action == "BUY":
+            cost[t.ticker] = cost.get(t.ticker, 0.0) + t.total_value
+            shares[t.ticker] = shares.get(t.ticker, 0.0) + t.shares
+        else:
+            held = shares.get(t.ticker, 0.0)
+            if held > 0:
+                avg = cost[t.ticker] / held
+                cost[t.ticker] -= avg * t.shares      # remove sold shares at avg
+                shares[t.ticker] = held - t.shares
+    return {tk: (cost[tk] / shares[tk]) for tk in shares
+            if shares[tk] > 1e-9 and cost.get(tk, 0) > 0}
+
+
+def build_intelligence_input(engine, snap, year, year_start_date, user_id=None):
+    """
+    Assemble the PLAIN-DATA dict the intelligence engine consumes. This is the
+    only place engine internals meet the (engine-agnostic) intelligence module.
+    Everything here is bounded by the current simulated date.
+    """
+    user_id = user_id or engine.default_user
+    pf_end = snap["portfolios"][user_id]
+
+    avg_cost = _average_cost(engine, user_id)
+    holdings = []
+    for h in pf_end["holdings"]:
+        basis = avg_cost.get(h["ticker"])
+        unreal = ((h["price_usd"] / basis - 1) * 100.0
+                  if basis and h.get("price_usd") else None)
+        holdings.append({"ticker": h["ticker"], "name": h["name"],
+                         "value_usd": h["value_usd"], "unreal_pct": unreal})
+
+    trades = [t for t in engine.transaction_log(user_id)
+              if t["date"][:4] == str(year)]
+    realized = realized_trades(engine, user_id, year)
+    bw = best_worst_realized(engine, user_id, year)
+
+    portfolio_pct = _pct(pf_end["total_value"],
+                         snap.get("_start_value", engine.config.starting_capital))
+    return {
+        "year": year,
+        "current_date": engine.current_date,
+        "trades": trades,
+        "realized": realized,
+        "holdings": holdings,
+        "total_value": pf_end["total_value"],
+        # PriceView enforces no-lookahead: it refuses any date > current_date.
+        "prices": intelligence.PriceView(engine.market.price_asof,
+                                         engine.current_date),
+        "best": bw["best"],
+        "worst": bw["worst"],
+        "risk": year_risk_metrics(engine, year, user_id),
+    }
 
 
 def _replay(engine, user_id, upto_interval):
@@ -253,6 +317,15 @@ def build_report(engine, snap, prev, user_id=None):
     risk = year_risk_metrics(engine, year, user_id)
 
     portfolio_pct = _pct(pf_end_value, pf_start_value)
+    beat = [{"name": b["name"], "diff": portfolio_pct - b["pct"]}
+            for b in benchmarks]
+
+    # --- ETS Intelligence: decision insights + behavioural biases ---
+    intel_input = build_intelligence_input(
+        engine, snap, year, year_start_date, user_id)
+    intel_input["beat"] = beat
+    intelligence_result = intelligence.analyze(intel_input)
+
     return {
         "year": year,
         "date": snap["date"],
@@ -269,8 +342,8 @@ def build_report(engine, snap, prev, user_id=None):
         "trades": trades,
         "realized": realized,          # best/worst closed trade this year
         "risk": risk,                  # this year's volatility / drawdown / Sharpe
-        "beat": [{"name": b["name"], "diff": portfolio_pct - b["pct"]}
-                 for b in benchmarks],
+        "beat": beat,
+        "intelligence": intelligence_result,   # Part A insights + Part B biases
     }
 
 

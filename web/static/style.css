@@ -273,6 +273,54 @@ a{color:var(--accent)}
 .verdict.up{background:var(--up-bg);border-color:rgba(52,211,153,.3);color:var(--up)}
 .verdict.down{background:var(--down-bg);border-color:rgba(248,113,113,.3);color:var(--down)}
 
+/* ---------- ETS Intelligence (insights + biases) ---------- */
+.intel .eyebrow{display:block;margin-bottom:.15rem}
+.insight-list{list-style:none;margin:.3rem 0 0;padding:0;display:grid;gap:.6rem}
+.insight{display:flex;gap:.75rem;align-items:flex-start;
+  background:var(--surface-2);border:1px solid var(--line);
+  border-left-width:3px;border-radius:10px;padding:.8rem .9rem}
+.insight strong{display:block;font-size:.95rem;margin-bottom:.15rem}
+.insight-detail{display:block;color:var(--ink-soft);font-size:.85rem;line-height:1.45}
+.insight-icon{flex:none;width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;font-weight:800;margin-top:.1rem}
+.insight.good{border-left-color:var(--up)}
+.insight.good .insight-icon{background:var(--up-bg);color:var(--up)}
+.insight.bad{border-left-color:var(--down)}
+.insight.bad .insight-icon{background:var(--down-bg);color:var(--down)}
+.insight.warn{border-left-color:var(--ink-soft)}
+.insight.warn .insight-icon{background:rgba(255,255,255,.1);color:var(--ink)}
+.insight.info{border-left-color:var(--line)}
+.insight.info .insight-icon{background:rgba(255,255,255,.08);color:var(--ink-soft)}
+
+.bias-list{display:grid;gap:.7rem;margin-top:.3rem}
+.bias{background:var(--surface-2);border:1px solid var(--line);
+  border-radius:10px;padding:.85rem .95rem;display:grid;gap:.3rem}
+.bias.clean{border-color:rgba(61,220,132,.35);background:var(--up-bg)}
+.bias-head{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.bias-name{font-weight:700;font-size:.98rem}
+.bias-name.up{color:var(--up)}
+.bias-def{color:var(--ink-soft);font-size:.85rem;font-style:italic}
+.bias-evidence{font-size:.9rem;line-height:1.45}
+.bias-sev{flex:none;font-size:.66rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;padding:.15rem .5rem;border-radius:99px;
+  border:1px solid var(--line);color:var(--ink-soft)}
+.bias-sev.sev-3{background:var(--down-bg);border-color:rgba(248,113,113,.4);color:var(--down)}
+
+/* dashboard teaser card */
+.intel-teaser{display:flex;align-items:center;gap:.9rem;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--line);border-left-width:3px;
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:.85rem 1.1rem;margin-bottom:1.15rem;text-decoration:none;color:var(--ink)}
+.intel-teaser:hover{background:var(--surface-2)}
+.intel-teaser.good{border-left-color:var(--up)}
+.intel-teaser.bad{border-left-color:var(--down)}
+.intel-teaser.warn,.intel-teaser.info{border-left-color:var(--ink-soft)}
+.intel-tag{flex:none;font-size:.68rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--ink-soft)}
+.intel-line{flex:1;font-weight:600;font-size:.95rem;min-width:180px}
+.intel-more{flex:none;color:var(--ink-soft);font-size:.82rem}
+
 /* year-end checkpoint banner */
 .checkpoint-bar{
   background:rgba(255,255,255,.08);

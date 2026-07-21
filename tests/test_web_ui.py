@@ -328,7 +328,11 @@ class TestAdvanceAndReport:
         for _ in range(26):
             step(client)
         body = client.get("/").get_data(as_text=True)
-        years = re.findall(r"/report/(\d{4})", body)
+        # Count the Reports DROPDOWN entries specifically (one per completed
+        # year). The intelligence teaser also links to a report, so a raw
+        # /report/ scan would double-count the latest year by design.
+        years = re.findall(r"/report/(\d{4})\"[^>]*>\s*\d{4} Annual Report", body)
+        assert years, "no report links found"
         assert sorted(years) == sorted(set(years)), f"duplicate reports: {years}"
 
     def test_dashboard_prompts_to_complete_the_year(self, client):

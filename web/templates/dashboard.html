@@ -82,6 +82,16 @@
   </div>
 </section>
 
+{# Optional teaser: the headline insight from the most recent annual report.
+   Full analysis lives in the report itself. #}
+{% if latest_insight %}
+<a class="intel-teaser {{ latest_insight.sentiment }}" href="{{ url_for('report', year=latest_insight.year) }}">
+  <span class="intel-tag">ETS Intelligence · {{ latest_insight.year }}</span>
+  <span class="intel-line">{{ latest_insight.headline }}</span>
+  <span class="intel-more">Full analysis →</span>
+</a>
+{% endif %}
+
 <div class="split">
   <!-- Holdings -->
   <section class="panel">

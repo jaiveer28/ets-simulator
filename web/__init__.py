@@ -161,6 +161,15 @@ def create_app(sim_db_path=None, market_db_path=None):
 
         needs_checkpoint = analytics.needs_year_checkpoint(engine)
 
+        # --- dashboard teaser: top insight from the most recent completed year ---
+        latest_insight = None
+        _years = analytics.available_report_years(engine)
+        if _years:
+            _rep = analytics.annual_report(engine, _years[-1])
+            _intel = (_rep or {}).get("intelligence") or {}
+            if _intel.get("insights"):
+                latest_insight = {"year": _years[-1], **_intel["insights"][0]}
+
         # --- 5-year timeline data (derived from config, nothing hardcoded) ---
         start_year = int(engine.config.start_date[:4])
         end_year = int(engine.config.end_date[:4])
@@ -190,6 +199,7 @@ def create_app(sim_db_path=None, market_db_path=None):
             "month_label": month_label(engine.current_date),
             "year": engine.clock.current_year,
             "timeline": timeline,
+            "latest_insight": latest_insight,
             # A finished simulation is one with no next interval AND no
             # outstanding year to close.
             "is_finished": not engine.clock.has_next() and not needs_checkpoint,

@@ -91,6 +91,62 @@
   </div>
 </section>
 
+{# ==================== ETS INTELLIGENCE ==================== #}
+{% if r.intelligence %}
+<!-- PART A: decision insights -->
+{% if r.intelligence.insights %}
+<section class="panel intel">
+  <span class="eyebrow">ETS Intelligence</span>
+  <h2>What you did well &amp; what to learn</h2>
+  <ul class="insight-list">
+    {% for i in r.intelligence.insights %}
+    <li class="insight {{ i.sentiment }}">
+      <span class="insight-icon">
+        {%- if i.sentiment == 'good' -%}✓{%- elif i.sentiment == 'bad' -%}✕{%- elif i.sentiment == 'warn' -%}!{%- else -%}i{%- endif -%}
+      </span>
+      <div>
+        <strong>{{ i.headline }}</strong>
+        <span class="insight-detail">{{ i.detail }}</span>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<!-- PART B: behavioural bias detection -->
+<section class="panel intel">
+  <span class="eyebrow">ETS Intelligence</span>
+  <h2>Behavioural patterns</h2>
+  {% if r.intelligence.biases %}
+  <p class="muted small" style="margin-top:-.4rem">
+    Patterns detected in your actual trading this year. These are learning
+    signals, not judgements — every investor exhibits some.</p>
+  <div class="bias-list">
+    {% for b in r.intelligence.biases %}
+    <div class="bias">
+      <div class="bias-head">
+        <span class="bias-name">{{ b.name }}</span>
+        <span class="bias-sev sev-{{ b.severity }}">
+          {%- if b.severity >= 3 -%}strong{%- elif b.severity == 2 -%}moderate{%- else -%}mild{%- endif -%}
+        </span>
+      </div>
+      <span class="bias-def">{{ b.definition }}</span>
+      <span class="bias-evidence">{{ b.evidence }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bias clean">
+    <span class="bias-name up">✓ No major behavioural biases this year</span>
+    <span class="bias-evidence">Disciplined trading — no over-concentration,
+      overtrading, panic selling, or momentum-chasing detected. That's exactly
+      the habit that compounds over time.</span>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
 <!-- Per-year risk metrics -->
 {% if r.risk and r.risk.n_periods >= 2 %}
 <section class="panel">
