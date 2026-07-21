@@ -19,16 +19,39 @@
   <span class="month">{{ month_label }}</span>
   <span class="stepline">Month {{ interval_no }} of {{ total_intervals }}
     &nbsp;·&nbsp; {{ current_date }}</span>
-  <div class="progress"><span style="width: {{ (interval_no / total_intervals * 100) }}%"></span></div>
+
+  {# 5-year timeline: a badge, a filled track with year tick-marks, a position
+     dot, and year labels. Reads as a timeline through the simulation, not a
+     loading bar. Year marks are evenly spaced across the 5-year span. #}
+  <div class="timeline">
+    <span class="tl-badge">Year {{ timeline.year_no }} of {{ timeline.total_years }}</span>
+    <div class="tl-bar">
+      <span class="tl-fill" style="width: {{ timeline.progress_pct }}%"></span>
+      {% for y in timeline.year_ticks %}
+        <span class="tl-tick"
+              style="left: {{ loop.index0 / (timeline.year_ticks|length - 1) * 100 }}%"></span>
+      {% endfor %}
+      <span class="tl-dot" style="left: {{ timeline.progress_pct }}%"></span>
+    </div>
+    <div class="tl-years">
+      {% for y in timeline.year_ticks %}
+        <span class="yr{{ ' first' if loop.first }}{{ ' last' if loop.last }}"
+              style="left: {{ loop.index0 / (timeline.year_ticks|length - 1) * 100 }}%">{{ y }}</span>
+      {% endfor %}
+    </div>
+  </div>
+
   <p class="note">Prices are as of {{ current_date }}. Nothing beyond this date
     exists to the simulator yet.</p>
 
   {% if needs_checkpoint %}
-    <a class="btn big" href="{{ url_for('checkpoint') }}">
+    <a class="btn big dark" href="{{ url_for('checkpoint') }}">
       Complete {{ year }} &amp; review your annual report →</a>
   {% else %}
     <form method="post" action="{{ url_for('advance') }}">
-      <button class="btn big" {% if is_finished %}disabled{% endif %}>
+      {# Advance is the SECONDARY action (btn dark) so the white Buy button
+         remains the single primary. #}
+      <button class="btn big dark" {% if is_finished %}disabled{% endif %}>
         {% if is_finished %}Simulation complete{% else %}Advance to next month →{% endif %}
       </button>
     </form>

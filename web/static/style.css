@@ -1,27 +1,29 @@
 /* ==========================================================================
-   ETS — navy & white theme
+   ETS — dark slate theme
    No framework, no CDN, no web fonts: fully self-contained and offline.
-   Palette: navy blue surfaces + white text + black shadows ONLY.
+   Palette: deep near-charcoal slate surfaces + white text + black shadows.
    The single exception is green/red, reserved strictly for gains/losses and
    success/error status — a functional signal, never decoration.
    ========================================================================== */
 
 :root{
-  --bg:#0a1633;              /* page: deep navy blue */
-  --surface:#0f1e42;         /* cards / panels */
-  --surface-2:#16295a;       /* raised rows, inputs */
+  --bg:#080b13;              /* page: deep near-charcoal slate */
+  --surface:#121724;         /* cards / panels: a clear step lighter than bg */
+  --surface-2:#1c2335;       /* raised rows, inputs */
   --ink:#ffffff;             /* primary text: white */
-  --ink-soft:#b7c2de;        /* secondary text: soft white (navy-tinted) */
-  --line:#26365f;            /* borders: navy */
-  --accent:#ffffff;          /* primary actions: white */
-  --accent-dark:#d7dff0;     /* white button hover */
-  --accent-ink:#0a1633;      /* navy text on a white button */
-  --up:#34d399;              /* gains (functional) */
-  --up-bg:rgba(52,211,153,.12);
+  --ink-soft:#a6b0c3;        /* secondary text: desaturated soft grey */
+  --line:#2a3346;            /* borders */
+  --accent:#ffffff;          /* PRIMARY action (Buy): solid white */
+  --accent-dark:#dbe1ec;     /* white button hover */
+  --accent-ink:#080b13;      /* dark text on a white button */
+  --secondary:#03060d;       /* SECONDARY action (Advance): near-black */
+  --secondary-hover:#0e131f;
+  --up:#3ddc84;              /* gains (functional) — slightly brighter for dark base */
+  --up-bg:rgba(61,220,132,.12);
   --down:#f87171;            /* losses (functional) */
   --down-bg:rgba(248,113,113,.12);
   --radius:12px;
-  --shadow:0 1px 2px rgba(0,0,0,.5), 0 6px 20px rgba(0,0,0,.35);
+  --shadow:0 1px 2px rgba(0,0,0,.6), 0 8px 24px rgba(0,0,0,.45);
 }
 
 *{box-sizing:border-box}
@@ -100,17 +102,38 @@ a{color:var(--accent)}
 .timehero .stepline{color:var(--ink-soft);font-size:.95rem;
   font-variant-numeric:tabular-nums}
 .timehero .note{color:var(--ink-soft);font-size:.83rem;margin:.6rem 0 0}
-.progress{height:7px;background:var(--bg);border-radius:99px;overflow:hidden;
-  margin:1rem auto 0;max-width:520px;border:1px solid var(--line)}
-.progress span{display:block;height:100%;
-  background:#ffffff;border-radius:99px}
-.timehero .btn{margin-top:1.1rem}
+.timehero .btn{margin-top:1.25rem}
+
+/* ---------- 5-year TIMELINE (not a loading bar) ---------- */
+.timeline{max-width:560px;margin:1.15rem auto .1rem}
+.tl-badge{display:inline-block;font-size:.72rem;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--ink);
+  background:var(--surface-2);border:1px solid var(--line);
+  padding:.22rem .7rem;border-radius:99px;margin-bottom:.75rem}
+.tl-bar{position:relative;height:8px;border-radius:99px;
+  background:var(--bg);border:1px solid var(--line)}
+.tl-fill{position:absolute;left:0;top:0;bottom:0;
+  background:#ffffff;border-radius:99px;min-width:2px}
+/* year boundary tick marks sitting across the track */
+.tl-tick{position:absolute;top:-3px;bottom:-3px;width:1px;
+  background:rgba(255,255,255,.22);transform:translateX(-.5px)}
+/* the "you are here" dot */
+.tl-dot{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;
+  background:#ffffff;transform:translate(-50%,-50%);
+  box-shadow:0 0 0 3px var(--surface),0 0 6px rgba(0,0,0,.6)}
+/* year labels aligned under each tick */
+.tl-years{position:relative;height:1.15rem;margin-top:.5rem}
+.tl-years .yr{position:absolute;top:0;transform:translateX(-50%);
+  font-size:.72rem;color:var(--ink-soft);white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.tl-years .yr.first{left:0;transform:none}
+.tl-years .yr.last{left:auto;right:0;transform:none}
 @media(max-width:560px){.timehero .month{font-size:1.9rem}}
 
 /* month-change transition: pure CSS, fades itself out, never blocks clicks */
 .monthflash{
   position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-  background:rgba(10,22,51,.88);z-index:60;pointer-events:none;
+  background:rgba(8,11,19,.9);z-index:60;pointer-events:none;
   animation:flashOut 1.8s ease-out forwards;
 }
 .monthflash div{text-align:center}
@@ -211,8 +234,14 @@ a{color:var(--accent)}
 }
 .btn:hover{background:var(--accent-dark)}
 .btn.big{padding:.85rem 1.6rem;font-size:1.02rem;white-space:nowrap}
-/* Sell is a secondary (outlined) action, not a colour: keeps the palette to
-   navy + white while staying visually distinct from the solid white Buy. */
+/* SECONDARY action (e.g. Advance to next month): near-black with light text and
+   a subtle border, so it's clearly visible on the dark page but sits BELOW the
+   solid-white primary (Buy) in the visual hierarchy. */
+.btn.dark{background:var(--secondary);color:var(--ink);
+  border-color:rgba(255,255,255,.28)}
+.btn.dark:hover{background:var(--secondary-hover);border-color:rgba(255,255,255,.45)}
+/* Sell is a bordered action, not a colour: visually distinct from the solid
+   white Buy without becoming a second competing primary. */
 .btn.sell{background:transparent;color:var(--ink);border-color:rgba(255,255,255,.55)}
 .btn.sell:hover{background:var(--surface-2)}
 .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
@@ -257,8 +286,8 @@ a{color:var(--accent)}
 /* ---------- chart (dark-readable) ---------- */
 .chart-wrap{width:100%;overflow-x:auto}
 .chart{width:100%;height:auto;display:block}
-.chart .grid{stroke:#26365f;stroke-width:1}
-.chart .axis-label{fill:#b7c2de;font-size:11px;
+.chart .grid{stroke:#2a3346;stroke-width:1}
+.chart .axis-label{fill:#a6b0c3;font-size:11px;
   font-family:inherit;font-variant-numeric:tabular-nums}
 .legend{display:flex;gap:1.15rem;flex-wrap:wrap;margin-top:.7rem;
   font-size:.85rem;color:var(--ink-soft)}

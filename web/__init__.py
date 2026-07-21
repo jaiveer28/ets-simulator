@@ -160,6 +160,23 @@ def create_app(sim_db_path=None, market_db_path=None):
                              "gain_usd": gain, "gain_pct": gain_pct})
 
         needs_checkpoint = analytics.needs_year_checkpoint(engine)
+
+        # --- 5-year timeline data (derived from config, nothing hardcoded) ---
+        start_year = int(engine.config.start_date[:4])
+        end_year = int(engine.config.end_date[:4])
+        # Year boundary labels, e.g. 2021 .. 2026 (one past the last year).
+        year_ticks = list(range(start_year, end_year + 2))
+        total_years = end_year - start_year + 1
+        interval_no = engine.clock.current_index + 1
+        timeline = {
+            "year_ticks": year_ticks,
+            "total_years": total_years,
+            "year_no": engine.clock.current_year - start_year + 1,
+            # fraction of months completed -> completing 12 months lands the dot
+            # exactly on the next year's tick.
+            "progress_pct": interval_no / engine.clock.total_intervals * 100,
+        }
+
         return {
             "state": state,
             "holdings": holdings,
@@ -167,11 +184,12 @@ def create_app(sim_db_path=None, market_db_path=None):
             "marks": marks,
             "universe": [{"ticker": t, "name": engine.market.name_of(t),
                           "price": prices.get(t)} for t in engine.universe()],
-            "interval_no": engine.clock.current_index + 1,
+            "interval_no": interval_no,
             "total_intervals": engine.clock.total_intervals,
             "current_date": engine.current_date,
             "month_label": month_label(engine.current_date),
             "year": engine.clock.current_year,
+            "timeline": timeline,
             # A finished simulation is one with no next interval AND no
             # outstanding year to close.
             "is_finished": not engine.clock.has_next() and not needs_checkpoint,
