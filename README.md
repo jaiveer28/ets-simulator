@@ -1,12 +1,18 @@
 # ETS — Educational Trading Simulator
 
+**Live demo:** https://ets-simulator.onrender.com
+*(free hosting — the first visit after it's been idle takes ~30–60s to wake up)*
+
 ETS is a historical stock-portfolio trading simulator. You start with **$100,000
 of virtual cash** and trade **10 real companies** using **real daily price data
 from January 2021 to December 2025**, moving forward through time one month at a
 time. At the end of each simulated year you get an **Annual Performance Report**
-comparing your decisions against passive benchmarks. Its purpose is to teach
-portfolio decision-making — and crucially, it is built so you can never cheat by
-seeing the future.
+that not only scores you against passive benchmarks but **analyses your actual
+decisions and names the behavioural biases you exhibited** — turning the tool
+from a scorekeeper into a teacher.
+
+Its purpose is to teach portfolio decision-making — and crucially, it is built so
+you can never cheat by seeing the future.
 
 ---
 
@@ -24,12 +30,61 @@ seeing the future.
   and "invest all my cash", computed exactly.
 - **Annual Performance Report** — year-start vs year-end value, your best and
   worst *decisions* (closed trades), and how you compared to benchmarks.
+- **ETS Intelligence** — the signature feature: plain-English **decision
+  insights** and **behavioural-bias detection** (disposition effect, panic
+  selling, FOMO, over-concentration, overtrading) computed from *your* actual
+  trades (see below).
 - **Risk metrics** — volatility, maximum drawdown, and the Sharpe ratio, each
   with a plain-English explanation.
 - **Benchmarks** — your portfolio vs an equal-weight buy-and-hold basket and the
   S&P 500 Total Return index, plotted over time.
-- **Runs fully offline** — once the data is downloaded, no internet is needed.
+- **Company reference page** — a background sheet on each of the 10 stocks
+  (sector, region, description) with no performance data, to inform decisions
+  without leaking the future.
+- **Runs fully offline** — no CDN, no external fonts/scripts; a self-contained
+  dark-theme UI with server-rendered SVG charts (no JavaScript charting library).
 - **No look-ahead** — the single most important property (see below).
+
+---
+
+## ETS Intelligence — the signature feature
+
+Most trading simulators tell you *how much* you made. ETS tells you *why*, and
+what to learn. At each year-end it analyses your real transactions and holdings
+and produces two things, in plain English:
+
+**Part A — Decision insights.** Ranked, specific, data-grounded observations
+mixing praise with constructive flags, for example:
+- *"Best decision: NVDA for +$14,059 (+54%) — a well-timed round-trip."*
+- *"You sold TSLA before a 54% rise — exiting too early can cap your upside."*
+- *"You held through a 48% drawdown without panicking — one of the hardest and
+  most valuable investing habits."*
+
+**Part B — Behavioural-bias detection.** It names the specific behavioural-finance
+biases your trading exhibited, each with the exact evidence that triggered it:
+
+| Bias | What it is | How ETS detects it |
+|------|-----------|--------------------|
+| **Disposition effect** | Selling winners early while clinging to losers | Sold ≥2 positions up ≥10% while still holding ≥1 down ≥10% |
+| **Loss aversion / panic selling** | Dumping a position into a sharp decline | A loss-making sale after the stock fell ≥15% in the prior ~2 months |
+| **FOMO / chasing** | Buying after a big run-up, near a peak | A buy after the stock had already risen ≥25% in the prior ~2 months |
+| **Over-concentration** | One stock dominating the portfolio | A single position ≥40% of total value (severe ≥60%) |
+| **Overtrading** | Trading far more than needed | More than 20 trades in a year |
+
+If you traded cleanly, it says so — *"No major behavioural biases this year —
+disciplined trading."* It only reports biases actually exhibited; it never
+invents them.
+
+**Built to be reused.** The analysis lives in a standalone module
+(`web/intelligence.py`) that takes plain data — trades, holdings, a price
+accessor, the current date — and returns structured insight/bias objects, with
+no dependency on the web app or the trading engine. A future "challenge mode"
+could feed it scenario data and reuse every detector unchanged.
+
+**It cannot cheat, by construction.** Every price the analysis reads passes
+through a gate that *refuses any date after the current simulated date*. A bias
+detector literally cannot see what happens next — verified by a test that spies
+on every price query during a report and confirms none reach beyond the present.
 
 ---
 
@@ -57,8 +112,9 @@ Three layers, each independent and testable, connected in one direction:
   about the web. It reads prices (read-only, date-gated), holds the forward-only
   clock, executes trades, tracks portfolios, and fires the year-end hook.
 - **Web UI** (`web/`) — a thin Flask app. Each request loads a simulation from
-  `simulations.db`, drives the engine, saves, and discards it. It never contains
-  business logic of its own.
+  `simulations.db`, drives the engine, saves, and discards it. It holds the
+  read-only *analytics* (reports, risk metrics, FIFO realized trades, and the
+  `intelligence` insight/bias engine) but no core trading logic of its own.
 - **Access layer** (`src/access.py`) — deliberately separate from the engine, so
   a future accounts/subscription layer can be added without touching the core.
 
@@ -157,10 +213,11 @@ $env:SECRET_KEY = "some-long-random-string"
 
 ## Testing
 
-The project has an automated test suite (**188 tests**) covering the trading
-engine, persistence, the risk-metric maths, FIFO trade matching, and the web
-layer — including dedicated tests that the no-look-ahead and offline guarantees
-hold.
+The project has an automated test suite (**207 tests**) covering the trading
+engine, persistence, the risk-metric maths, FIFO trade matching, every
+behavioural-bias detector (with sequences that should *and* should not trigger
+each one), and the web layer — including dedicated tests that the no-look-ahead
+and offline guarantees hold.
 
 ```powershell
 & "C:\Users\mp_ma\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/ -q
@@ -182,9 +239,13 @@ not just green by luck.
 - **Risk-free rate.** The Sharpe ratio assumes a fixed 3% annual risk-free rate
   (≈ the average US T-bill yield over the period), configurable in one place. A
   refinement would use the actual month-by-month rate.
-- **Development server.** It runs on Flask's built-in server, which is ideal for
-  a local demo but would need a production web server (e.g. gunicorn/waitress)
-  for real deployment.
+- **Free-tier hosting.** The live demo runs on Render's free tier (via a
+  production `gunicorn` server). It sleeps when idle — so the first visit takes
+  ~30–60s — and its disk is ephemeral, so a saved simulation resets when the app
+  redeploys. A persistent disk or hosted database would fix this.
+- **Challenge mode (future).** The insight/bias engine was deliberately built as
+  a standalone, reusable module so a future gamified "challenge mode" — scoring
+  the user against set scenarios — can reuse every detector without a rewrite.
 - **Monetisation-ready, not monetised.** The engine/access-layer split leaves a
   clean seam for subscriptions or premium features, but none are built.
 
@@ -209,8 +270,11 @@ STOCK SIMULATOR/
 ├── web/                    # the Flask application
 │   ├── __init__.py         # routes + per-request engine lifecycle
 │   ├── analytics.py        # reports, chart series, realized trades (FIFO)
+│   ├── intelligence.py     # ETS Intelligence: decision insights + bias detection
 │   ├── metrics.py          # volatility / drawdown / Sharpe maths
 │   ├── charts.py           # server-rendered SVG chart (no JS libraries)
+│   ├── stock_info.py       # static company background for the reference page
 │   ├── templates/  static/ # dark-theme UI
-└── tests/                  # 188 automated tests
+├── wsgi.py  Procfile  render.yaml   # production deployment (gunicorn / Render)
+└── tests/                  # 207 automated tests
 ```
